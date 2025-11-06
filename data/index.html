@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Traffic Control</title>
+  <link rel="stylesheet" href="style.css?v=7" />
+</head>
+<body>
+
+  <!-- Toolbar: mode + timing + status -->
+  <div class="toolbar">
+    <div class="group">
+      <label>Mode:</label>
+      <button id="btnManual" class="btn btn-sm">Manual</button>
+      <button id="btnAuto" class="btn btn-sm">Auto</button>
+      <span id="modeLabel" class="pill muted">?</span>
+    </div>
+
+    <div id="autoPanel" class="group hidden">
+      <label>Timing (s):</label>
+      G <input type="number" id="tg" min="1" value="40" />
+      Y <input type="number" id="ty" min="1" value="5" />
+      R <input type="number" id="tr" min="1" value="45" />
+      <button id="btnSetTiming" class="btn btn-sm">Apply</button>
+    </div>
+
+    <div id="statusLine" class="muted">
+      <span id="phaseText"></span>
+      <span id="remainText"></span>
+    </div>
+  </div>
+
+  <!-- Map + 14 lights -->
+  <div id="map-wrapper">
+    <div id="map-container">
+      <img src="map.png" id="map" />
+      <div class="light" style="top:5%; left:29%;"  data-id="0"><img src="traffic_base.png" class="traffic-icon"></div>
+      <div class="light" style="top:5%; left:62%;"  data-id="1"><img src="traffic_base.png" class="traffic-icon"></div>
+      <div class="light" style="top:16%; left:29%;" data-id="2"><img src="traffic_base.png" class="traffic-icon"></div>
+      <div class="light" style="top:16%; left:62%;" data-id="3"><img src="traffic_base.png" class="traffic-icon"></div>
+      <div class="light" style="top:30%; left:29%;" data-id="4"><img src="traffic_base.png" class="traffic-icon"></div>
+      <div class="light" style="top:30%; left:62%;" data-id="5"><img src="traffic_base.png" class="traffic-icon"></div>
+      <div class="light" style="top:43%; left:29%;" data-id="6"><img src="traffic_base.png" class="traffic-icon"></div>
+      <div class="light" style="top:43%; left:62%;" data-id="7"><img src="traffic_base.png" class="traffic-icon"></div>
+      <div class="light" style="top:57%; left:29%;" data-id="8"><img src="traffic_base.png" class="traffic-icon"></div>
+      <div class="light" style="top:57%; left:62%;" data-id="9"><img src="traffic_base.png" class="traffic-icon"></div>
+      <div class="light" style="top:70%; left:29%;" data-id="10"><img src="traffic_base.png" class="traffic-icon"></div>
+      <div class="light" style="top:70%; left:62%;" data-id="11"><img src="traffic_base.png" class="traffic-icon"></div>
+      <div class="light" style="top:84%; left:29%;" data-id="12"><img src="traffic_base.png" class="traffic-icon"></div>
+      <div class="light" style="top:84%; left:62%;" data-id="13"><img src="traffic_base.png" class="traffic-icon"></div>
+    </div>
+  </div>
+
+  <!-- Popup Manual -->
+  <div id="popup" class="hidden">
+    <div class="popup-content">
+      <span id="close">&times;</span>
+      <h2>Traffic Light <span id="light-id"></span></h2>
+      <div class="buttons">
+        <button class="btn red"    onclick="setLight('R')">Red</button>
+        <button class="btn yellow" onclick="setLight('Y')">Yellow</button>
+        <button class="btn green"  onclick="setLight('G')">Green</button>
+      </div>
+      <div id="manualHint" class="muted" style="margin-top:8px;"></div>
+    </div>
+  </div>
+
+  <script src="script.js?v=7"></script>
+</body>
+</html>
