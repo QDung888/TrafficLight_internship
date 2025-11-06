@@ -1,4 +1,11 @@
-Trang git quan ly code trang web dieu khien, giao dien dieu khien va code vi xu ly esp32 cho mo hinh den giao thong
+TRANG GITHUB QUẢN LÝ CODE ĐIỀU KHIỂN MÔ HÌNH ĐÈN GIAO THÔNG
+Thành phần dự án
+1. Phần cứng: esp32-s3, PCF8575, ULN2803, PCF8575
+2. Sourcecode
+3. Tool tạo lệnh JSON điều khiển mô hình qua Serial
+
+
+Hướng dẫn sử dụng git
 
 Tạo 1 dự án trên github (tạo 1 project trống trên github sau đó clone về bắt đầu làm)
 
@@ -25,8 +32,4 @@ git add .
 git commit -m "your_mesage"
 git remote add origin https://....(link đến repo github)
 git push origin master
-Lệnh điều khiển qua Serial
 
-opcode=1 là để set trạng thái đèn {"id_src":1,"id_des":2,"mac_src":"AA:BB:CC","mac_des":"FF:FF:FF","opcode":1,"data":{"lamp":0,"color":"R"}}
-
-opcode=2 là để đọc trạng thái 14 đèn về in ra serial {"id_src":1,"id_des":2,"mac_src":"AA:BB:CC","mac_des":"FF:FF:FF","opcode":2,"data":{}}
