@@ -1,40 +1,51 @@
-#include <WiFi.h>
-#include <WebServer.h>
-#include <Wire.h>
+//Tóm tắt chức năng:
+//    - ESP32 chạy WiFi SoftAP (SSID: "Traffic Control") + WebServer (port 80).
+//    - Điều khiển 14 cột đèn giao thông (mỗi cột 3 LED: G/Y/R) qua 3 IC mở rộng I/O PCF8575 (I2C).
+//       + Địa chỉ PCF8575: 0x20, 0x23, 0x27. Mỗi PCF điều khiển 5 cột (5*3=15 chân), tổng 3 PCF ~ 15 cột (dùng 14).
+//       + Công thức ánh xạ cột → expander/pin: expIndex=lamp/5 ; basePin=(lamp*3)%15 ; offset màu: G=0, Y=1, R=2.
+//    - Hai chế độ: MANUAL và AUTO (máy trạng thái 4 pha: A_G → A_Y → B_G → B_Y).
+//       + Thời gian mặc định: durG=40s (xanh), durY=5s (vàng), đỏ = xanh + vàng hướng đối diện.
+//       + Nếu MANUAL không có thao tác trong 60s → tự trở về AUTO.
+//    - Lưu/đọc cấu hình (chế độ, thời gian pha) tại /config.json (SPIFFS).
+//    - API HTTP
+//    - Giao tiếp Serial (JSON theo opcode) có chữ ký MD5:
+
+#include <WiFi.h> // WiFi SoftAP cho ESP32
+#include <WebServer.h> // HTTP server nhúng (port 80)
+#include <Wire.h> // I2C dùng cho PCF8575
 #include <PCF8575.h>   // xreef
-#include "SPIFFS.h"
+#include "SPIFFS.h" // Lưu các file trong thư mục data valf flash
 #include <Arduino.h>
-#include <ArduinoJson.h>
-#include <MD5Builder.h>
+#include <ArduinoJson.h> // Parse/serialize JSON cho HTTP/Serial
+#include <MD5Builder.h> // Tạo MD5
 
-// ===== Config WiFi SoftAP =====
-const char* ssid     = "Traffic Control";
-const char* password = "12345678";
+// ===== Config WiFi SoftAP ====
+const char* ssid     = "Traffic Control"; // Tên WIFI es[32 phát ra
+const char* password = "12345678";  // Password
 
-WebServer server(80);
+WebServer server(80); // Lắng nghe HTTP trên cổng 80
 
 // ===== I2C pins =====
-// const int SDA_PIN = 21;
-// const int SCL_PIN = 22;
-const int SDA_PIN = 3;
-const int SCL_PIN = 2;
+const int SDA_PIN = 3; // Chân SDA
+const int SCL_PIN = 2; // Chân SCL
 
 // ===== PCF8575 expanders =====
-PCF8575 pcf1(0x20, SDA_PIN, SCL_PIN);
+PCF8575 pcf1(0x20, SDA_PIN, SCL_PIN);  // Địa chỉ I2C các module PCF8575
 PCF8575 pcf2(0x23, SDA_PIN, SCL_PIN);
 PCF8575 pcf3(0x27, SDA_PIN, SCL_PIN);
-PCF8575* expanders[3] = { &pcf1, &pcf2, &pcf3 };
+PCF8575* expanders[3] = { &pcf1, &pcf2, &pcf3 }; // Mảng con trỏ tới các địa chỉ module PCF8575
 
 // ===== Security / Device =====
-#define PRIVATE_KEY "my_secret_key"
-#define DEVICE_ID   2
-#define MAX_LAMPS   14
+#define PRIVATE_KEY "my_secret_key"  // Khoá bí mật dùng để tạo/kiểm tra MD5
+#define DEVICE_ID   2   // ID thiết bị (dùng trong khung JSON Serial)
+#define MAX_LAMPS   14  // Tổng số cột đèn sử dụng
 
 // Bắt buộc yêu cầu kèm MD5
-#define REQUIRE_REQ_AUTH 1   // 1=bắt buộc; 0=không bắt buộc
+#define REQUIRE_REQ_AUTH 1   // Bắt buộc request phải kèm auth (MD5) hợp lệ  1=bắt buộc; 0=không bắt buộc
 
 // ===== Nhóm A ngược nhóm B =====
 // Nhóm A: 0,3,4,7,8,11,12 | Nhóm B: 1,2,5,6,9,10,13
+// Trả về true nếu cột đèn thuộc nhóm A (A và B ngược pha nhau). Dùng để đặt màu theo nhóm. 
 inline bool isGroupA(int lamp) {
   return (lamp==0 || lamp==3 || lamp==4 || lamp==7 || lamp==8 || lamp==11 || lamp==12);
 }
@@ -57,9 +68,9 @@ struct AutoCtrl {
 } autoCtrl;
 
 // ===== Tự động về AUTO sau khi MANUAL rỗi =====
-const unsigned long MANUAL_IDLE_TO_AUTO_MS = 60000UL; // 1 phút
+const unsigned long MANUAL_IDLE_TO_AUTO_MS = 60000UL; //Timeout rỗi ở MANUAL trước khi tự quay về AUTO (ms) 1 phút
 unsigned long lastManualCmdMs = 0;
-inline void onManualActivity() { lastManualCmdMs = millis(); }
+inline void onManualActivity() { lastManualCmdMs = millis(); } // Ghi nhận thời điểm có thao tác thủ công (để tính timeout tự về AUTO). 
 
 // ===== Khai báo trước =====
 void setLight(int lamp, char color);
@@ -134,6 +145,7 @@ void saveConfig() {
   File f = SPIFFS.open(CONFIG_PATH, "w");
   if (f) { serializeJson(d, f); f.close(); }
 }
+// Đọc /config.json (nếu có) để phục hồi mode và thời lượng pha. 
 void loadConfig() {
   if (!SPIFFS.exists(CONFIG_PATH)) return;
   File f = SPIFFS.open(CONFIG_PATH, "r");
@@ -151,6 +163,7 @@ void loadConfig() {
 }
 
 // ===== Phase helpers =====
+//Chuyển enum AutoPhase → chuỗi tên pha (PH_A_G, PH_A_Y, PH_B_G, PH_B_Y)
 const char* phaseToStr(AutoPhase ph) {
   switch (ph) {
     case PH_A_G: return "A_G";
@@ -162,6 +175,7 @@ const char* phaseToStr(AutoPhase ph) {
 }
 
 // ===== AUTO state machine =====
+//Ghi nhận pha hiện tại, đặt thời lượng pha (durG/durY) và cập nhật màu cho 2 nhóm.
 void enterPhase(AutoPhase ph) {
   autoCtrl.phase = ph;
   autoCtrl.phaseStart = millis();
@@ -172,6 +186,7 @@ void enterPhase(AutoPhase ph) {
     case PH_B_Y: autoCtrl.phaseDur = durY; setGroups('R', 'Y'); break; // A đỏ, B vàng
   }
 }
+// Máy trạng thái AUTO: khi hết thời lượng pha hiện tại thì chuyển sang pha kế tiếp. 
 void autoTick() {
   unsigned long now = millis();
   if ((now - autoCtrl.phaseStart) >= autoCtrl.phaseDur) {
@@ -185,6 +200,7 @@ void autoTick() {
     enterPhase(next);
   }
 }
+// Tính thời gian còn lại (ms) của pha đang chạy.
 unsigned long phaseRemainingMs() {
   unsigned long now = millis();
   unsigned long elapsed = now - autoCtrl.phaseStart;
@@ -195,6 +211,7 @@ unsigned long phaseRemainingMs() {
 String serialBuffer = "";
 
 // ===== HTTP handlers =====
+// HTTP /set: đặt màu 1 cột theo query lamp=<i>&color=R|Y|G; nếu đang AUTO thì tự chuyển MANUAL.
 void handleSetLight() {
   if (!(server.hasArg("lamp") && server.hasArg("color"))) {
     server.send(400, "application/json", "{\"error\":\"Missing parameters\"}");
@@ -218,7 +235,7 @@ void handleSetLight() {
 
   server.send(200, "application/json", "{\"status\":0,\"result\":\"OK\"}");
 }
-
+// Phục vụ file tĩnh từ SPIFFS; hỗ trợ .html, .css, .js, .png
 void handleFileRequest() {
   String path = server.uri();
   if (path.endsWith("/")) path += "index.html";
@@ -236,7 +253,7 @@ void handleFileRequest() {
   server.streamFile(file, contentType);
   file.close();
 }
-
+// HTTP /status: trả JSON trạng thái tổng quan (mode, pha, thời gian còn lại, màu từng cột).
 void handleStatus() {
   StaticJsonDocument<1024> doc;
   doc["mode"] = (g_mode == MODE_AUTO) ? "auto" : "manual";
@@ -258,7 +275,7 @@ void handleStatus() {
   String out; serializeJson(doc, out);
   server.send(200, "application/json", out);
 }
-
+// HTTP /mode: nếu có ?set=auto|manual thì đổi chế độ, đồng thời trả JSON {mode}.
 void handleMode() {
   if (server.hasArg("set")) {
     String m = server.arg("set");
@@ -270,7 +287,7 @@ void handleMode() {
   String out; serializeJson(d, out);
   server.send(200, "application/json", out);
 }
-
+// HTTP /timing: ?g,?y (giây) để đổi thời lượng pha; tự hiệu chỉnh pha khi đang AUTO.
 void handleTiming() {
   bool changed = false;
   if (server.hasArg("g")) { durG = server.arg("g").toInt() * 1000UL; changed = true; }
@@ -289,7 +306,7 @@ void handleTiming() {
 }
 
 // ===== MD5 helpers =====
-// MD5(id_src + id_des + opcode + serialize(data) + time + PRIVATE_KEY)
+// Tạo chuỗi MD5(id_src + id_des + opcode + serialize(data) + time + PRIVATE_KEY).
 String calcMD5(int id_src, int id_des, int opcode, JsonVariantConst data, long timeVal, const char* key) {
   String raw = String(id_src) + String(id_des) + String(opcode);
   String dataStr; serializeJson(data, dataStr);
@@ -298,7 +315,7 @@ String calcMD5(int id_src, int id_des, int opcode, JsonVariantConst data, long t
   raw += String(key);
   MD5Builder md5; md5.begin(); md5.add(raw); md5.calculate(); return md5.toString();
 }
-
+// So sánh auth client gửi với chuỗi MD5 mong đợi. Trả true nếu hợp lệ.
 bool verifyRequestAuth(int id_src, int id_des, int opcode, JsonVariantConst data, long reqTime, const char* reqAuth) {
   if (!reqAuth || reqTime == 0) return false;
   String expect = calcMD5(id_src, id_des, opcode, data, reqTime, PRIVATE_KEY);
@@ -311,6 +328,7 @@ bool verifyRequestAuth(int id_src, int id_des, int opcode, JsonVariantConst data
 // opcode = 3: đọc trạng thái tất cả đèn
 // opcode = 4: đọc chế độ (auto/manual) + pha & timing
 // opcode = 5: đặt chế độ (data.set="auto"|"manual")
+// Xử lý khung JSON qua Serial theo opcode: 1/2/3/4/5. Có kiểm tra auth (nếu bật).
 void handlePacket(String input) {
   StaticJsonDocument<1024> doc;
   DeserializationError error = deserializeJson(doc, input);
@@ -473,6 +491,7 @@ void handlePacket(String input) {
   Serial.println();
 }
 
+// Khởi tạo Serial, SPIFFS, I2C + PCF8575 (set OUTPUT/LOW), WiFi SoftAP, route HTTP và trạng thái ban đầu.
 void setup() {
   Serial.begin(115200);
   Serial.println("ESP32 Traffic-Light Controller (AUTO two directions) Ready!");
