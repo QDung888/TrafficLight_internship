@@ -46,8 +46,10 @@ Project/
 - Arduino IDE cài đặt các thư viện cần thiết, và tool để up file quá SPIFFS theo video hướng dẫn ở trên. Biên dịch và nạp code
 - Chọn board esp32s3-devmodule
 - Chọn COM phù hợp sau đó nhấn upload
-Lưu ý:
-- Phiên bản esp32 2.0.15
+## ❗ Lưu ý
+- Phiên bản esp32 2.0.12
 - Thư viện PCF8575 của XREEF. Link tải: https://github.com/xreef/PCF8575_library
-
-
+- Nếu lỗi thử đổi địa chỉ I2C các module PCF8575 cách xa nhau (vd thay vì 2 địa chỉ 0x20 0x21 thì lấy 0x20 và 0x23)
+- Không up file lên flash được: 1. Rút cáp nạp ra cắm lại
+                                2. Dung lượng file quá lớn, vào https://www.iloveimg.com/vi/nen-anh để giảm DL ảnh
+                                3. Dùng phiên bản Arduino IDE cũ nếu đã làm theo hướng dẫn mà không xuất hiện esp32 sketch dataupload
