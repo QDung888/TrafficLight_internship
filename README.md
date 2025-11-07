@@ -1,35 +1,53 @@
-TRANG GITHUB QUẢN LÝ CODE ĐIỀU KHIỂN MÔ HÌNH ĐÈN GIAO THÔNG
-Thành phần dự án
-1. Phần cứng: esp32-s3, PCF8575, ULN2803, PCF8575
-2. Sourcecode
-3. Tool tạo lệnh JSON điều khiển mô hình qua Serial
+# Traffic Light
+## 🚀 Giới thiệu
+- Dự án này là thiết kế module điều khiển mô hình đèn giao thông. Mô hình có 14 cột đèn, mỗi cột có 3 led đơn xanh, đỏ, vàng. Loại led 12v.
+- Yêu cầu sử dụng Arduino IDE, Visual Studio Code, Altium làm hệ thống build dự án.  
+- Code được viết bằng **Arduino IDE** và chạy trên board điều khiển tự thiết kế.
+[Cập nhật version mới nhất qua](https://github.com/QDung888/TrafficLight_internship/tree/master)
+
+## 🛠️ Cấu hình môi trường
+- **Board**: esp32-s3
+- **Framework**: Arduino IDE
+- **Ngôn ngữ**: C/C++
+
+## 📦 Thư viện sử dụng
+Project sử dụng các thư viện chính sau:
+- **Wifi** –  WiFi SoftAP cho ESP32 
+- **WebServer** – HTTP server nhúng (port 80)
+- **Wire** – I2C dùng cho PCF8575
+- **PCF8575** – Dùng thư viện của xreef
+- **SPIFFS** – Lưu các file trong thư mục data vào flash. Link video hướng dẫn cài tool: https://youtu.be/9i1nDUoDRcI?si=-pUQmOpcrhJP6nr6  
+- **ArduinoJson** – Parse/serialize JSON cho HTTP/Serial
+- **MD5Builder** – Tạo MD5
 
 
-Hướng dẫn sử dụng git
+## 📂 Cấu trúc dự án
+Project/    
+    ├── Image
+    ├── Schematic
+    ├── Sourcecode/
+        └── Source code
+            ├── Sourcode.ino     #code firmware 
+            ├── data/       # data để lưu vào flash của esp32
+                    ├── Index.html  # Giao diện webapp
+                    ├── script.js   # Thực thi chắc năng webapp
+                    ├── style.css   # phong cách của webapp
+                    ├── map.PNG
+                    ├── traffic_base.PNG
+                    ├── traffic_green.PNG
+                    ├── traffic_yellow.PNG
+                    ├── traffic_red.PNG       
+        └──esp32_pkt_tool.py  # công cụ tạo file JSON
 
-Tạo 1 dự án trên github (tạo 1 project trống trên github sau đó clone về bắt đầu làm)
+## ⚙️ Cách cài đặt
+- Hướng dẫn cài tool SPIFFS: https://youtu.be/9i1nDUoDRcI?si=-pUQmOpcrhJP6nr6  
 
-B1: Tạo 1 Repositories trên github để chứa code dự án
+## ⬆️ Hướng dẫn upload firmware
+- Arduino IDE cài đặt các thư viện cần thiết, và tool để up file quá SPIFFS theo video hướng dẫn ở trên. Biên dịch và nạp code
+- Chọn board esp32s3-devmodule
+- Chọn COM phù hợp sau đó nhấn upload
+Lưu ý:
+- Phiên bản esp32 2.0.15
+- Thư viện PCF8575 của XREEF. Link tải: https://github.com/xreef/PCF8575_library
 
-B2: Cài đặt git trên PC và clone Repositories trên github về git clone your_link_repo
-
-B3: code
-
-git status: trang thai file
-git add . : them file
-git commit -m "your_message" : tao noi dung commit
-git push origin main : day code len github
-Tạo 1 project local và đẩy lên github (dành cho project đã có sẵn đẩy lên github)
-
-B1: tạo 1 github repo
-
-B2: git init : để tạo .git tại thư mục chứa project trong máy, theo dõi code trong project
-
-B3: viết code
-
-git status
-git add .
-git commit -m "your_mesage"
-git remote add origin https://....(link đến repo github)
-git push origin master
 
