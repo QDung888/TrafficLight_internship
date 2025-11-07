@@ -1,4 +1,5 @@
 //Tóm tắt chức năng:
+//    Loại board chọn esp32s3-devmodule. Phiên bản Board esp32 là 2.0.12
 //    - ESP32 chạy WiFi SoftAP (SSID: "Traffic Control") + WebServer (port 80).
 //    - Điều khiển 14 cột đèn giao thông (mỗi cột 3 LED: G/Y/R) qua 3 IC mở rộng I/O PCF8575 (I2C).
 //       + Địa chỉ PCF8575: 0x20, 0x23, 0x27. Mỗi PCF điều khiển 5 cột (5*3=15 chân), tổng 3 PCF ~ 15 cột (dùng 14).
@@ -9,6 +10,15 @@
 //    - Lưu/đọc cấu hình (chế độ, thời gian pha) tại /config.json (SPIFFS).
 //    - API HTTP
 //    - Giao tiếp Serial (JSON theo opcode) có chữ ký MD5:
+//Các thư viện sử dụng
+//Wifi –  WiFi SoftAP cho ESP32 version 1.2.7
+//WebServer – HTTP server nhúng (port 80) version 3.8.1
+//Wire – I2C dùng cho PCF8575
+//PCF8575 – Dùng thư viện của xreef V2.0.1
+//SPIFFS – Lưu các file trong thư mục data vào flash. Link video hướng dẫn cài tool: https://youtu.be/9i1nDUoDRcI?si=-pUQmOpcrhJP6nr6  . Link tải: https://github.com/me-no-dev/arduino-esp32fs-plugin
+//ArduinoJson – Parse/serialize JSON cho HTTP/Serial version 7.4.2
+//MD5Builder – Tạo MD5
+
 
 #include <WiFi.h> // WiFi SoftAP cho ESP32
 #include <WebServer.h> // HTTP server nhúng (port 80)
