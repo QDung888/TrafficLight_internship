@@ -7,7 +7,7 @@
 [Cập nhật version mới nhất qua](https://github.com/QDung888/TrafficLight_internship/tree/master)
 
 ## 🛠️ Cấu hình môi trường
-- **Board**: esp32-s3 mini version board esp32 2.0.15
+- **Board**: esp32-s3 mini version board esp32 2.0.12
 - **Framework**: Arduino IDE
 - **Ngôn ngữ**: C/C++
 
@@ -47,7 +47,7 @@ Project/
 - Arduino IDE cài đặt các thư viện cần thiết, và tool để up file quá SPIFFS theo video hướng dẫn ở trên. Biên dịch và nạp code
 - Chọn board esp32s3-devmodule
 - Chọn COM phù hợp sau đó nhấn upload
-Lưu ý:
+## ❗Lưu ý:
 - Phiên bản esp32 2.0.12
 - Thư viện PCF8575 của XREEF. Link tải: https://github.com/xreef/PCF8575_library
 
